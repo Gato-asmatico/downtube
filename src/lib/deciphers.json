@@ -1,0 +1,9 @@
+[
+    "function anonymous(methods,a) {a=a.split(\"\");methods.c(a,20);methods.c(a,8);methods.c(a,3);methods.c(a,62);methods.c(a,50);methods.a(a,66);methods.b(a,3);methods.c(a,70);methods.a(a,78);return a.join(\"\")}",
+    "function anonymous(methods,a) {a=a.split(\"\");methods.c(a,43);methods.b(a,1);methods.a(a,57);return a.join(\"\")}",
+    "function anonymous(methods,a) {a=a.split(\"\");methods.a(a,79);methods.b(a,2);methods.a(a,24);methods.b(a,3);return a.join(\"\")}",
+    "function anonymous(methods,a) {a=a.split(\"\");methods.c(a,20);methods.b(a,1);methods.a(a,38);methods.b(a,3);methods.c(a,48);methods.a(a,80);methods.b(a,2);methods.c(a,54);return a.join(\"\")}",
+    "function anonymous(methods,a) {a=a.split(\"\");methods.b(a,1);methods.c(a,60);methods.a(a,55);methods.c(a,45);methods.b(a,3);methods.c(a,28);methods.a(a,63);return a.join(\"\")}",
+    "function anonymous(methods,a) {a=a.split(\"\");methods.b(a,3);methods.c(a,35);methods.c(a,24);methods.b(a,3);methods.c(a,23);methods.a(a,69);methods.c(a,47);methods.a(a,13);return a.join(\"\")}",
+    "function anonymous(methods,a) {a=a.split(\"\");methods.b(a,1);methods.a(a,12);methods.c(a,38);methods.a(a,77);methods.b(a,1);methods.c(a,11);methods.b(a,2);return a.join(\"\")}"
+]
