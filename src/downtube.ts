@@ -6,6 +6,7 @@ import {
   assemblyPlaylistObject,
 } from "./lib/index";
 import { type IncomingMessage } from "http";
+import { parse } from "path";
 
 export interface resError extends Error {
   res?: IncomingMessage;
@@ -19,8 +20,8 @@ export type streamingData = {
       duration: number;
       mimeType: string;
       size: string | undefined;
-      source?: string;
-      url?:string
+      signatureCipher?: string;
+      url?: string;
     };
   };
   video: {
@@ -31,8 +32,8 @@ export type streamingData = {
         codec: string[];
         mimeType: string;
         size: string | undefined;
-        source?: string;
-        url?:string
+        signatureCipher?: string;
+        url?: string;
       };
     };
   };
@@ -44,8 +45,8 @@ export type streamingData = {
         codec: string[];
         mimeType: string;
         size: string | undefined;
-        source?: string;
-        url?:string;
+        signatureCipher?: string;
+        url?: string;
       };
     };
   };
@@ -78,12 +79,12 @@ export type playlist = {
   playlistId: string;
   channel: {
     name: string;
-    nameTag?: string;
+    nameTag: string;
     id: string;
     url: string;
-    profilePictures?: Array<{ url: string; width: number; height: number }>;
+    profilePictures: Array<{ url: string; width: number; height: number }>;
   };
-  isInfinity: boolean;
+  isInfinity?: boolean;
   playlistShareUrl: string;
 };
 export type methodsType = {
@@ -97,6 +98,7 @@ export class Downtube {
   constructor() {}
   resolvePlaylist(url: string): Promise<playlist> {
     return new Promise((resolve, reject) => {
+      if (url.indexOf("//music.") != -1) url = url.split("music.").join("");
       request(url)
         .then((res) => {
           let html = "";
@@ -104,14 +106,7 @@ export class Downtube {
             html += data.toString();
           });
           res.on("end", () => {
-            let regexHtmlPlaylist =
-              /ytInitialData = (\{.+?\});/.exec(html) ||
-              /path: '\\\/browse'.+data:.'(.+?)'/.exec(html);
-            if (!regexHtmlPlaylist)
-              return reject(
-                new Error("regexHtmlPlaylist is " + regexHtmlPlaylist)
-              );
-            resolve(assemblyPlaylistObject(regexHtmlPlaylist));
+            resolve(assemblyPlaylistObject(html));
           });
         })
         .catch(reject);
@@ -204,13 +199,12 @@ export class Downtube {
     });
   }
 
-  getSource(sigCipherOrUrl: string, jsPath: string): Promise<string> {
+  getSource(signatureCipher: string, jsPath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      if (sigCipherOrUrl.startsWith("http")) return resolve(sigCipherOrUrl);
       let sig: any = {},
         source: string,
         jsUrl = "https://www.youtube.com" + jsPath;
-      for (let n of sigCipherOrUrl.split("&")) {
+      for (let n of signatureCipher.split("&")) {
         let a = n.split("=");
         sig[a[0]] = decodeURIComponent(a[1]);
       }

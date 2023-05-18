@@ -1,78 +1,21 @@
 import { type playlist, simpleContent } from "../downtube";
+import * as fs from "node:fs";
 
-export default function assemblyPlaylistObject(
-  regexHtmlPlaylist: RegExpExecArray
-): playlist {
-  if (regexHtmlPlaylist[1].startsWith("\\")) {
-    let htmlPlaylist = JSON.parse(resolveHexCodes(regexHtmlPlaylist[1]));
-    let title =
-        htmlPlaylist.header.musicDetailHeaderRenderer.title.runs[0].text,
-      playlistId =
-        htmlPlaylist.responseContext.serviceTrackingParams[0].params.find(
-          (x: any) => x.key == "browse_id"
-        ).value,
-      channelName =
-        htmlPlaylist.header.musicDetailHeaderRenderer.subtitle.runs.find(
-          (x: any) => x.navigationEndpoint
-        ).text,
-      channelId =
-        htmlPlaylist.header.musicDetailHeaderRenderer.subtitle.runs.find(
-          (x: any) => x.navigationEndpoint
-        ).navigationEndpoint.browseEndpoint.browseId,
-      channelUrl = "https://music.youtube.com/channel/" + channelId,
-      playlistShareUrl =
-        "https://music.youtube.com/playlist?list=" + playlistId,
-      simpleContents =
-        htmlPlaylist.contents.singleColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].musicPlaylistShelfRenderer.contents
-          .filter(
-            (x: any) =>
-              x.musicResponsiveListItemRenderer.overlay
-                .musicItemThumbnailOverlayRenderer.content
-                .musicPlayButtonRenderer.accessibilityPlayData
-          )
-          .map((x: any): simpleContent => {
-            let longDuration =
-              x.musicResponsiveListItemRenderer.overlay
-                .musicItemThumbnailOverlayRenderer.content
-                .musicPlayButtonRenderer.accessibilityPlayData.accessibilityData
-                .label;
-            return {
-              title:
-                x.musicResponsiveListItemRenderer.flexColumns[0]
-                  .musicResponsiveListItemFlexColumnRenderer.text.runs[0].text,
-              id: x.musicResponsiveListItemRenderer.playlistItemData.videoId,
-              url:
-                "https://www.youtube.com/watch?v=" +
-                x.musicResponsiveListItemRenderer.playlistItemData.videoId,
-              duration: {
-                long: longDuration.slice(longDuration.lastIndexOf("- ") + 2),
-                short:
-                  x.musicResponsiveListItemRenderer.fixedColumns[0]
-                    .musicResponsiveListItemFixedColumnRenderer.text.runs[0]
-                    .text,
-              },
-              thumbs:
-                x.musicResponsiveListItemRenderer.thumbnail
-                  .musicThumbnailRenderer.thumbnail.thumbnails,
-            };
-          });
-    return {
-      title,
-      isInfinity: false,
-      playlistId,
-      playlistShareUrl,
-      simpleContents,
-      channel: { name: channelName, id: channelId, url: channelUrl },
-    };
-  } else {
-    {
-      let htmlPlaylist = JSON.parse(regexHtmlPlaylist[1]),
-        playlist =
+export default function assemblyPlaylistObject(html: string): playlist {
+  try {
+    let regexHtmlPlaylist = /ytInitialData = (\{.+?\});/.exec(html);
+    if (!regexHtmlPlaylist)
+      throw new Error("regexHtmlPlaylist is " + regexHtmlPlaylist);
+
+    let htmlPlaylist = JSON.parse(regexHtmlPlaylist[1]);
+    if (htmlPlaylist.contents.twoColumnWatchNextResults) {
+      let playlist =
           htmlPlaylist.contents.twoColumnWatchNextResults.playlist.playlist,
         title = playlist.title,
         isInfinity = playlist.isInfinity,
         playlistId = playlist.playlistId,
-        playlistShareUrl = playlist.playlistShareUrl,
+        playlistShareUrl =
+          "https://www.youtube.com/playlist?list=" + playlistId,
         channelInfos =
           htmlPlaylist.contents.twoColumnWatchNextResults.results.results.contents.find(
             (x: any) => x.videoSecondaryInfoRenderer
@@ -115,12 +58,63 @@ export default function assemblyPlaylistObject(
         channel,
         simpleContents,
       };
+    } else {
+      let title = htmlPlaylist.header.playlistHeaderRenderer.title.simpleText,
+        playlistId = htmlPlaylist.header.playlistHeaderRenderer.playlistId,
+        playlistShareUrl =
+          "https://www.youtube.com/playlist?list=" + playlistId,
+        channelInfo =
+          htmlPlaylist.header.playlistHeaderRenderer.ownerText.runs[0],
+        profilePictures =
+          htmlPlaylist.sidebar.playlistSidebarRenderer.items.find(
+            (x: any) => x[Object.keys(x)[0]].videoOwner
+          ),
+        simpleContents: Array<simpleContent> =
+          htmlPlaylist.contents.twoColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].itemSectionRenderer.contents[0].playlistVideoListRenderer.contents
+            .filter((x: any) => x.playlistVideoRenderer)
+            .map((x: any) => {
+              x = x.playlistVideoRenderer;
+              return {
+                title: x.title.runs[0].text,
+                id: x.videoId,
+                url: "https://www.youtube.com/watch?v=" + x.videoId,
+                thumbs: x.thumbnail.thumbnails,
+                duration: {
+                  long: x.lengthText.accessibility.accessibilityData.label,
+                  short: x.lengthText.simpleText,
+                },
+              };
+            });
+
+      profilePictures =
+        profilePictures[Object.keys(profilePictures)[0]].videoOwner
+          .videoOwnerRenderer.thumbnail.thumbnails;
+
+      let channel = {
+        name: channelInfo.text,
+        nameTag:
+          channelInfo.navigationEndpoint.browseEndpoint.canonicalBaseUrl.slice(
+            1
+          ),
+        id: channelInfo.navigationEndpoint.browseEndpoint.browseId,
+        url:
+          "https://www.youtube.com/channel/" +
+          channelInfo.navigationEndpoint.browseEndpoint.browseId,
+        profilePictures,
+      };
+      return { channel, title, playlistId, playlistShareUrl, simpleContents };
+    }
+  } catch (err) {
+    if (process.env.dev && JSON.parse(process.env.dev)) {
+      try {
+        fs.mkdirSync(module.path + "/html/");
+      } catch (FSErr: any) {
+        if (FSErr && FSErr.code !== "EEXIST") throw FSErr;
+      }
+      fs.writeFileSync(`${module.path}/html/assemblyPlaylistObject_${Date.now()}.html`, html);
+      throw err;
+    } else {
+      throw err;
     }
   }
-}
-
-function resolveHexCodes(string: string): string {
-  return string.replace(/\\x([0-9A-Fa-f]{2})/g, function () {
-    return String.fromCharCode(parseInt(arguments[1], 16));
-  });
 }

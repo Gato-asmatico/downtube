@@ -2,13 +2,13 @@ import * as fs from "node:fs";
 import { type streamingData } from "../downtube";
 
 export default function getStreamingData(html: string): streamingData {
-  let regexPlayerResponse = /ytInitialPlayerResponse = (\{.+?\});/.exec(html),
-    regexInitialData = /ytInitialData = (\{.+?\});/.exec(html),
-    regexJsPath = /"jsUrl":"(.+?\/base.js)"/.exec(html),
-    playerResponse: any,
-    initialData: any,
-    jsPath: string | undefined;
-  if (regexJsPath && regexInitialData && regexPlayerResponse) {
+  try {
+    let regexPlayerResponse = /ytInitialPlayerResponse = (\{.+?\});/.exec(html),
+      regexInitialData = /ytInitialData = (\{.+?\});/.exec(html),
+      regexJsPath = /"jsUrl":"(.+?\/base.js)"/.exec(html),
+      playerResponse: any,
+      initialData: any,
+      jsPath: string | undefined;
     playerResponse = JSON.parse(regexPlayerResponse[1]);
     initialData = JSON.parse(regexInitialData[1]);
     jsPath = regexJsPath[1];
@@ -41,16 +41,15 @@ export default function getStreamingData(html: string): streamingData {
     };
     Object.defineProperty(attrib, "jsPath", { value: jsPath });
 
-    if (!playerResponse.streamingData) throw emitError();
-
     for (let n of playerResponse.streamingData.formats) {
       attrib.videoAndAudio[n.qualityLabel] = {
-        duration: Number(n.approxDurationMs),
         bitrate: n.bitrate,
-        mimeType: /(.+);/.exec(n.mimeType)[1],
+        duration: Number(n.approxDurationMs),
         codec: getSimpleCodec(n.mimeType),
-        source: n.url || n.signatureCipher,
+        mimeType: /(.+);/.exec(n.mimeType)[1],
+        signatureCipher: n.signatureCipher,
         size: getSize(n.contentLength),
+        url: n.url,
       };
     }
     for (let n of playerResponse.streamingData.adaptiveFormats) {
@@ -61,12 +60,14 @@ export default function getStreamingData(html: string): streamingData {
           : (attrib[media][n.qualityLabel] = {});
 
         attrib[media][n.qualityLabel][getSimpleCodec(n.mimeType)[0]] = {
-          duration: Number(n.approxDurationMs),
           bitrate: n.bitrate,
-          mimeType: /(.+);/.exec(n.mimeType)[1],
+          duration: Number(n.approxDurationMs),
           codec: getSimpleCodec(n.mimeType),
+          mimeType: /(.+);/.exec(n.mimeType)[1],
           source: n.url || n.signatureCipher,
+          signatureCipher: n.signatureCipher,
           size: getSize(n.contentLength),
+          url: n.url,
         };
       } else {
         attrib[media][n.audioQuality]
@@ -75,40 +76,28 @@ export default function getStreamingData(html: string): streamingData {
         attrib[media][n.audioQuality][
           Object.keys(attrib[media][n.audioQuality]).length
         ] = {
-          duration: Number(n.approxDurationMs),
           bitrate: n.bitrate,
-          mimeType: /(.+);/.exec(n.mimeType)[1],
           codec: getSimpleCodec(n.mimeType),
-          source: n.url || n.signatureCipher,
+          duration: Number(n.approxDurationMs),
+          mimeType: /(.+);/.exec(n.mimeType)[1],
+          signatureCipher: n.signatureCipher,
           size: getSize(n.contentLength),
+          url: n.url,
         };
       }
     }
     return attrib;
-  }
-
-  throw emitError();
-
-  function emitError(): Error {
-    let err = new Error(""),
-      elements: { [index: string]: string | undefined } = {
-         jsPath,
-        initialData,
-        playerResponse,
-      };
-    for (let n in elements) {
-      if (!elements[n]) err.message += `${n} is ${elements[n]}\n`;
-    }
+  } catch (err) {
     if (process.env.dev && JSON.parse(process.env.dev)) {
       try {
         fs.mkdirSync(module.path + "/html/");
       } catch (FSErr: any) {
         if (FSErr && FSErr.code !== "EEXIST") throw FSErr;
       }
-      fs.writeFileSync(`${module.path}/html/index_${Date.now()}.html`, html);
-      return err;
+      fs.writeFileSync(`${module.path}/html/getStreamingData_${Date.now()}.html`, html);
+      throw err;
     } else {
-      return err;
+      throw err;
     }
   }
 }
