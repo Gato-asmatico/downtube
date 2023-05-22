@@ -1,3 +1,6 @@
+/*Não fará mais diferenciação entre url e Sigcypher, apenas receberá o link do youtube e retornará a source; fazer diferenciação internamente*/
+
+
 import {
   getDecipher,
   decipher,
@@ -6,7 +9,6 @@ import {
   assemblyPlaylistObject,
 } from "./lib/index";
 import { type IncomingMessage } from "http";
-import { parse } from "path";
 
 export interface resError extends Error {
   res?: IncomingMessage;
@@ -187,7 +189,6 @@ export class Downtube {
           html += data.toString();
         });
         res.on("end", () => {
-          info = getStreamingData(html);
           try {
             info = getStreamingData(html);
           } catch (err) {
