@@ -1,5 +1,6 @@
-/*Não fará mais diferenciação entre url e Sigcypher, apenas receberá o link do youtube e retornará a source; fazer diferenciação internamente*/
-
+//Não fará mais diferenciação entre url e Sigcypher, apenas receberá o link do youtube e retornará a source. Fazer diferenciação internamente.
+//No getInfo(), verificar se quando um url de uma fonte é invalido todos os outros são. 
+//Fazer um callLoop no getInfo() até que a fonte seja válida.
 
 import {
   getDecipher,
@@ -194,6 +195,8 @@ export class Downtube {
           } catch (err) {
             return reject(err);
           }
+
+	if(info.)
           resolve(info);
         });
       });
