@@ -196,7 +196,6 @@ export class Downtube {
             return reject(err);
           }
 
-	if(info.)
           resolve(info);
         });
       });
