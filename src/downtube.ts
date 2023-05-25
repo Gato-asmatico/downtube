@@ -96,9 +96,9 @@ export type methodsType = {
   c: (a: string[], b: number) => void;
 };
 export type deciphersType = ((methods: methodsType, sig: string) => string)[];
-
 export class Downtube {
   constructor() {}
+
   resolvePlaylist(url: string): Promise<playlist> {
     return new Promise((resolve, reject) => {
       if (url.indexOf("//music.") != -1) url = url.split("music.").join("");
@@ -168,7 +168,7 @@ export class Downtube {
         .catch(reject);
     });
   }
-  getInfo(url: string): Promise<streamingData> {
+  getInfo(url: string, validateSource:boolean): Promise<streamingData> {
     return new Promise((resolve, reject) => {
       let parsedUrl = new URL(url),
         hosts = [
@@ -196,7 +196,13 @@ export class Downtube {
             return reject(err);
           }
 
-          resolve(info);
+         if(!validateSource)return  resolve(info);
+	 let streamingDataAudio = info.audio["AUDIO_QUALITY_LOW"][0]
+	if(streamingDataAudio.url){
+		request(streamingDataAudio.url).then(x=>resolve(info)).catch(x=>resolve(getInfo(url,validateSource)))
+	}else{
+	resolveSigcipher(streamingDataAudio.signatureCipher)
+	}
         });
       });
     });

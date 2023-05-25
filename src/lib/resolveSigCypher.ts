@@ -26,26 +26,13 @@ function resolveSource(signatureCipher: string, jsPath: string): Promise<string>
               source = `${sig.url}&sig=${encodeURIComponent(
                 newDecipher.main(sig.s)
               )}`;
-              request(source)
-                .then((x) => {
-                  x.destroy();
-                  resolve(source);
-                })
-                .catch(reject);
             });
           })
           .catch(reject);
       } else {
         source = `${sig.url}&sig=${encodeURIComponent(
-          decipherResponse.deciphed
-        )}`;
-        request(source)
-          .then((x) => {
-            x.destroy();
-            resolve(source);
-          })
-          .catch(reject);
+         decipherResponse.deciphed
+       	)}`;
       }
     });
   }
-  module.exports = resolveSource
