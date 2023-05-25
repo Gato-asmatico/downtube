@@ -1,10 +1,10 @@
 import decipher from "./decipher";
-import getDecipher from "./getDecipher";
+import createNewDecipher from "./createNewDecipher";
 import getStreamingData from "./getStreamingData";
 import request from "./request";
 import assemblyPlaylistObject from "./assemblyPlaylistObject";
 export {
-  getDecipher,
+  createNewDecipher,
   decipher,
   getStreamingData,
   request,

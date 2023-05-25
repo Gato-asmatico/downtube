@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
-import {type methodsType} from "../downtube"
+import { type methodsType } from "../downtube";
 
-export default function getDecipher(
+export default function createNewDecipher(
   basejs: string,
-  deciphers: ((methods:methodsType,sig: string) => string)[]
+  deciphers: ((methods: methodsType, sig: string) => string)[]
 ) {
   let RegexMain = /(function\(a\)\{a=a\.split\(""\).+\})/.exec(basejs),
     main: string | undefined,
@@ -113,7 +113,8 @@ function updateDeciphers(
     }
 
     deciphers.push(
-      new Function("methods",
+      new Function(
+        "methods",
         ...stringMain
           .slice(stringMain.indexOf("(") + 1, stringMain.indexOf(")"))
           .split(","),
