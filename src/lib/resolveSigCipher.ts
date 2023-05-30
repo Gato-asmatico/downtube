@@ -1,5 +1,5 @@
 import {decipher,createNewDecipher,request} from "./index"
-function resolveSource(signatureCipher: string, jsPath: string): Promise<string> {
+export default function resolveSigCipher(signatureCipher: string, jsPath: string): Promise<string> {
     return new Promise((resolve, reject) => {
       let sig: any = {},
         source: string,

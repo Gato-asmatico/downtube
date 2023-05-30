@@ -1,5 +1,5 @@
 //Não fará mais diferenciação entre url e Sigcypher, apenas receberá o link do youtube e retornará a source. Fazer diferenciação internamente.
-//No getInfo(), verificar se quando um url de uma fonte é invalido todos os outros são. 
+//No getInfo(), verificar se quando um url de uma fonte é invalido todos os outros são.
 //Fazer um callLoop no getInfo() até que a fonte seja válida.
 
 import {
@@ -115,6 +115,7 @@ export class Downtube {
         .catch(reject);
     });
   }
+
   search(searchTerm: string): Promise<simpleContent[]> {
     return new Promise((resolve, reject) => {
       let apiUrl = `https://www.youtube.com/results?search_query=${searchTerm.replace(
@@ -168,8 +169,10 @@ export class Downtube {
         .catch(reject);
     });
   }
-  getInfo(url: string, validateSource:boolean): Promise<streamingData> {
+
+  getInfo(url: string, validateSource: boolean, tries:number = 0): Promise<streamingData> {
     return new Promise((resolve, reject) => {
+      if(tries > 2)return reject(new Error("Max attemps reached!"))
       let parsedUrl = new URL(url),
         hosts = [
           "www.youtube.com",
@@ -185,28 +188,34 @@ export class Downtube {
         );
       request(url).then((res) => {
         let html = "",
-          info: streamingData;
+          streamingData: streamingData;
         res.on("data", (data) => {
           html += data.toString();
         });
         res.on("end", () => {
           try {
-            info = getStreamingData(html);
+            streamingData = getStreamingData(html);
           } catch (err) {
             return reject(err);
           }
 
-         if(!validateSource)return  resolve(info);
-	 let streamingDataAudio = info.audio["AUDIO_QUALITY_LOW"][0]
-	if(streamingDataAudio.url){
-		request(streamingDataAudio.url).then(x=>resolve(info)).catch(x=>resolve(getInfo(url,validateSource)))
-	}else{
-	resolveSigcipher(streamingDataAudio.signatureCipher)
-	}
+          if (!validateSource) return resolve(streamingData);
+          
+          if (!streamingData.audio["AUDIO_QUALITY_LOW"])
+            return reject(
+              new Error("streamingData.audio.AUDIO_QUALITY_LOW não encontrado!")
+            );
+
+          let streamingDataAudio = streamingData.audio["AUDIO_QUALITY_LOW"][0];
+          if (streamingDataAudio.url) {
+            request(streamingDataAudio.url)
+              .then((x) => resolve(streamingData))
+              .catch((x) => resolve(this.getInfo(url, validateSource, tries + 1)));
+          } else {
+            resolveSigcipher(streamingDataAudio.signatureCipher);
+          }
         });
       });
     });
   }
-
-  
 }
