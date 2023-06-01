@@ -3,14 +3,14 @@ export default function resolveSigCipher(signatureCipher: string, jsPath: string
     return new Promise((resolve, reject) => {
       let sig: any = {},
         source: string,
-        jsUrl = "https://www.youtube.com" + jsPath;
+        basejsSource = "https://www.youtube.com" + jsPath;
       for (let n of signatureCipher.split("&")) {
         let a = n.split("=");
         sig[a[0]] = decodeURIComponent(a[1]);
       }
       let decipherResponse = decipher(sig.s);
       if ("deciphers" in decipherResponse) {
-        request(jsUrl)
+        request(basejsSource)
           .then((res) => {
             let basejs = "";
             res.on("data", (data) => {

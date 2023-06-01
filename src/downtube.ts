@@ -6,7 +6,9 @@ import {
   getDecipher,
   decipher,
   getStreamingData,
+  resolveSigCipher
   request,
+  resolveSigCipher
   assemblyPlaylistObject,
 } from "./lib/index";
 import { type IncomingMessage } from "http";
