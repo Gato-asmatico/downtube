@@ -3,12 +3,10 @@
 //Fazer um callLoop no getInfo() até que a fonte seja válida.
 
 import {
-  getDecipher,
   decipher,
   getStreamingData,
-  resolveSigCipher
   request,
-  resolveSigCipher
+  resolveSigCipher,
   assemblyPlaylistObject,
 } from "./lib/index";
 import { type IncomingMessage } from "http";
@@ -172,9 +170,13 @@ export class Downtube {
     });
   }
 
-  getInfo(url: string, validateSource: boolean, tries:number = 0): Promise<streamingData> {
+  getInfo(
+    url: string,
+    validateSource: boolean,
+    tries: number = 0
+  ): Promise<streamingData> {
     return new Promise((resolve, reject) => {
-      if(tries > 2)return reject(new Error("Max attemps reached!"))
+      if (tries > 2) return reject(new Error("Max attemps reached!"));
       let parsedUrl = new URL(url),
         hosts = [
           "www.youtube.com",
@@ -202,7 +204,7 @@ export class Downtube {
           }
 
           if (!validateSource) return resolve(streamingData);
-          
+
           if (!streamingData.audio["AUDIO_QUALITY_LOW"])
             return reject(
               new Error("streamingData.audio.AUDIO_QUALITY_LOW não encontrado!")
@@ -211,10 +213,21 @@ export class Downtube {
           let streamingDataAudio = streamingData.audio["AUDIO_QUALITY_LOW"][0];
           if (streamingDataAudio.url) {
             request(streamingDataAudio.url)
-              .then((x) => resolve(streamingData))
-              .catch((x) => resolve(this.getInfo(url, validateSource, tries + 1)));
-          } else {
-            resolveSigcipher(streamingDataAudio.signatureCipher);
+              .then((x) => {
+                x.destroy();
+                resolve(streamingData);
+              })
+              .catch((x) => {
+                x.destroy();
+                resolve(this.getInfo(url, validateSource, tries + 1));
+              });
+          } else if (streamingDataAudio.signatureCipher) {
+            resolveSigCipher(
+              streamingDataAudio.signatureCipher,
+              streamingData.jsPath
+            );
+          }else{
+            return reject(new Error(`No data source.\nstreamingData.url:${streamingDataAudio.url}\nstreamingDataAudio.signatureCipher:${streamingDataAudio.signatureCipher}\n`))
           }
         });
       });
