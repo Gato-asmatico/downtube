@@ -11,11 +11,37 @@ import {
 } from "./lib/index";
 import { type IncomingMessage } from "http";
 
+type streamingDataOrInfoBase = {
+  channel: {
+    name: string;
+    nameTag: string;
+    id: string;
+    url: string;
+    profilePictures: Array<{ url: string; width: number; height: number }>;
+  };
+  expires: string;
+  jsPath: string;
+  thumbs: Array<{ url: string; width: number; height: number }>;
+  title: string;
+  uploadDate: string;
+};
+
 export interface resError extends Error {
   res?: IncomingMessage;
   statusCode?: number;
 }
-export type streamingData = {
+export type info = streamingDataOrInfoBase & {
+  source: {
+    bitrate: number;
+    codec: string[];
+    duration: number;
+    mimeType: string;
+    size: string | undefined;
+    signatureCipher?: string;
+    url?: string;
+  };
+};
+export type streamingData = streamingDataOrInfoBase & {
   videoAndAudio: {
     [resolution: string]: {
       bitrate: number;
@@ -53,18 +79,6 @@ export type streamingData = {
       };
     };
   };
-  channel: {
-    name: string;
-    nameTag: string;
-    id: string;
-    url: string;
-    profilePictures: Array<{ url: string; width: number; height: number }>;
-  };
-  expires: string;
-  jsPath: string;
-  thumbs: Array<{ url: string; width: number; height: number }>;
-  title: string;
-  uploadDate: string;
 };
 export type simpleContent = {
   title: string;
@@ -96,6 +110,7 @@ export type methodsType = {
   c: (a: string[], b: number) => void;
 };
 export type deciphersType = ((methods: methodsType, sig: string) => string)[];
+
 export class Downtube {
   constructor() {}
 
@@ -170,13 +185,8 @@ export class Downtube {
     });
   }
 
-  getInfo(
-    url: string,
-    validateSource: boolean,
-    tries: number = 0
-  ): Promise<streamingData> {
+  getInfo(url: string): Promise<streamingData> {
     return new Promise((resolve, reject) => {
-      if (tries > 2) return reject(new Error("Max attemps reached!"));
       let parsedUrl = new URL(url),
         hosts = [
           "www.youtube.com",
@@ -187,7 +197,7 @@ export class Downtube {
       if (hosts.indexOf(parsedUrl.hostname) == -1)
         return reject(
           new Error(
-            "Essa aplicação não suporta outras fontes de mídia além do https://www.youtube.com"
+            "this application does not support other media sources than https://www.youtube.com"
           )
         );
       request(url).then((res) => {
@@ -202,35 +212,47 @@ export class Downtube {
           } catch (err) {
             return reject(err);
           }
-
-          if (!validateSource) return resolve(streamingData);
-
-          if (!streamingData.audio["AUDIO_QUALITY_LOW"])
-            return reject(
-              new Error("streamingData.audio.AUDIO_QUALITY_LOW não encontrado!")
-            );
-
-          let streamingDataAudio = streamingData.audio["AUDIO_QUALITY_LOW"][0];
-          if (streamingDataAudio.url) {
-            request(streamingDataAudio.url)
-              .then((x) => {
-                x.destroy();
-                resolve(streamingData);
-              })
-              .catch((x) => {
-                x.destroy();
-                resolve(this.getInfo(url, validateSource, tries + 1));
-              });
-          } else if (streamingDataAudio.signatureCipher) {
-            resolveSigCipher(
-              streamingDataAudio.signatureCipher,
-              streamingData.jsPath
-            );
-          }else{
-            return reject(new Error(`No data source.\nstreamingData.url:${streamingDataAudio.url}\nstreamingDataAudio.signatureCipher:${streamingDataAudio.signatureCipher}\n`))
-          }
+          return resolve(streamingData);
         });
       });
+    });
+  }
+
+  getSimpleSource(
+    url: string,
+    videoQuality:"high" | "medium" | "low",
+    audioQuality: "high" | "medium" | "low",
+    streamingData:streamingData,
+    maxTries: number,
+    tries: number
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+
+    });
+  }
+
+  getSource(
+    url: string,
+    sourceOrAudioQuality?: string,
+    maxTries: number = 3,
+    tries: number = 0
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      if (!url) return reject(new Error("video url was not provided"));
+      if (!sourceOrAudioQuality)
+        return reject(new Error("source or audioQuality was not provided"));
+
+      let source = ["high", "medium", "low"].indexOf(
+        sourceOrAudioQuality.toLowerCase()
+      );
+      request("")
+        .then((x: any) => {
+          return resolve("");
+        })
+        .catch((x: any) => {
+          if (x.statusCode != 403) return reject(x);
+          this.getInfo(url).then((x) => {});
+        });
     });
   }
 }
